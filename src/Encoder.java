@@ -13,8 +13,6 @@ public class Encoder{
   private SimplePriorityQueue<BinaryTreeNode<Integer>> freqMap = new SimplePriorityQueue<BinaryTreeNode<Integer>>();
   private SimpleBinaryTree<Integer> codeMap = new SimpleBinaryTree<Integer>();
   private HashMap<Integer, String> charToCode = new HashMap<Integer, String>();
-//  private DoubleLinkedList<Integer> charVal = new DoubleLinkedList<>();
-//  private DoubleLinkedList<String> codeVal = new DoubleLinkedList<>();
 
 
   public void findFreq(String inFile){
@@ -25,17 +23,9 @@ public class Encoder{
       int c;
 
       while ((c = in.read()) != -1) {
-        Integer charValue = Integer.valueOf(c);
-        System.out.print(charValue+ " ");
         BinaryTreeNode<Integer> newNode = new BinaryTreeNode<Integer>(c, null, null);
         freqMap.increment(newNode);
       }
-
-      // int numChars = freqMap.size();
-      // charVal = new int[numChars];
-      // codeVal = new int[numChars];
-      
-      freqMap.printArray();
     }catch(IOException e){
       System.out.println("File read exception");
       
@@ -63,13 +53,7 @@ public class Encoder{
       //get first smallest two nodes
       int priority1 = freqMap.peekPriority();
       BinaryTreeNode<Integer> node1 = freqMap.dequeue();
-      
-//      // if no other nodes left, current node will become the root
-//      if (freqMap.getSize()==0) {
-//        newNode = node1;
-//        break;
-//      }
-//      
+    
       // otherwise, make a parent for node1 and node2 with combined priority
       int priority2 = freqMap.peekPriority();
       BinaryTreeNode<Integer> node2 = freqMap.dequeue();
@@ -84,14 +68,7 @@ public class Encoder{
     //create a tree and make the root the topmost node
     codeMap.setRoot(newNode);
     
-    System.out.println("Finished tree");
-    codeMap.displayInOrder();
     mapCharacters();
-//    System.out.print("charVal:" );
-//    charVal.printArray();
-//    System.out.println("");
-//    System.out.print("codeVal:" );
-//    codeVal.printArray();
   }
 
   //method to map all char to values
@@ -112,8 +89,8 @@ public class Encoder{
   }
 
   // creates a compressed version of file
-  public String newFile(String inFile){
-    String data = "";
+  public StringBuilder newFile(String inFile){
+    StringBuilder data = new StringBuilder("");
     FileInputStream in = null;
 
     try {
@@ -121,9 +98,8 @@ public class Encoder{
       int c;
 
       while ((c = in.read()) != -1) {
-        Integer objectVal = Integer.valueOf(c);
         //get location of character value and add the codeValue to string
-        data = data+charToCode.get(objectVal);
+        data = data.append(charToCode.get(c));
       }
       return data;
     }catch(IOException e){
@@ -143,8 +119,8 @@ public class Encoder{
   // print file name, tree, and data to file
   public void printCompress(String inFile, String outFile){
     FileOutputStream out = null;
-    //data to encode
-    String data = newFile(inFile);
+    //encoded file
+    StringBuilder data = newFile(inFile);
     
     try {
       out = new FileOutputStream(outFile);
@@ -174,14 +150,12 @@ public class Encoder{
       out.write(10);
 
       //add extra bits to end of data
-      data = data+"0".repeat(extra);  
+      data = data.append("0".repeat(extra));  
 
       //parse string 8 bits at a time to make a character
-      while (!data.isEmpty()){
-        int binaryString = Integer.parseInt(data.substring(0,8),2);
+      for (int i = 0; i < data.length(); i += 8){
+        int binaryString = Integer.parseInt(data.substring(i,i+8),2);
         out.write(binaryString);
-        
-        data = data.substring(8);
       }  
       
     }catch(IOException e){

@@ -10,6 +10,7 @@ import java.util.HashMap;
  */
 
 public class Encoder{
+  private HashMap<Integer, Integer> freqHash = new HashMap<Integer, Integer>();
   private SimplePriorityQueue<BinaryTreeNode<Integer>> freqMap = new SimplePriorityQueue<BinaryTreeNode<Integer>>();
   private SimpleBinaryTree<Integer> codeMap = new SimpleBinaryTree<Integer>();
   private HashMap<Integer, String> charToCode = new HashMap<Integer, String>();
@@ -21,13 +22,18 @@ public class Encoder{
     try {
       in = new FileInputStream(inFile);
       int c;
-
+    
       while ((c = in.read()) != -1) {
-        BinaryTreeNode<Integer> newNode = new BinaryTreeNode<Integer>(c, null, null);
-        freqMap.increment(newNode);
+//        BinaryTreeNode<Integer> newNode = new BinaryTreeNode<Integer>(c, null, null);
+        Integer frequency = freqHash.get(c);
+        freqHash.put(c, frequency!=null ? frequency+1:1);
       }
+      
+      in.close();
+      System.out.println("Frequency map complete");
     }catch(IOException e){
       System.out.println("File read exception");
+      return;
       
     } finally {
       try{
@@ -38,11 +44,11 @@ public class Encoder{
       }
     }
   }
+  
 
   public void createCodeMap(){
-    //while loop
-    //take 2 nodes and combine them, then make a new node with the priority as sum of their priorities, enqueue that node
-
+    // create priority queue from hashmap
+    freqHash.forEach((character, frequency) -> freqMap.enqueue(new BinaryTreeNode<Integer>(character, null, null), frequency));
     BinaryTreeNode<Integer> newNode = null;
     // special case: one character
     if (freqMap.getSize()==1) {
@@ -67,8 +73,8 @@ public class Encoder{
     }
     //create a tree and make the root the topmost node
     codeMap.setRoot(newNode);
-    
     mapCharacters();
+    System.out.println("Binary tree complete");
   }
 
   //method to map all char to values
@@ -89,22 +95,24 @@ public class Encoder{
   }
 
   // creates a compressed version of file
-  public StringBuilder newFile(String inFile){
+  public StringBuilder newFile(String inFile) {
     StringBuilder data = new StringBuilder("");
     FileInputStream in = null;
 
     try {
       in = new FileInputStream(inFile);
       int c;
-
+  
       while ((c = in.read()) != -1) {
         //get location of character value and add the codeValue to string
         data = data.append(charToCode.get(c));
       }
+      in.close();
+      System.out.println("Data strung... hang tight!");
       return data;
     }catch(IOException e){
       System.out.println("File read exception");
-      
+      return null;
     } finally {
       try{
         if (in != null) {
@@ -113,34 +121,44 @@ public class Encoder{
       }catch (IOException e){
       }
     }
-    return null;
   }
 
   // print file name, tree, and data to file
   public void printCompress(String inFile, String outFile){
     FileOutputStream out = null;
-    //encoded file
-    StringBuilder data = newFile(inFile);
     
     try {
+      //encoded file
+      StringBuilder data = newFile(inFile);
+      if (data==null) {
+        throw new IOException();
+      }
+      
       out = new FileOutputStream(outFile);
-
+  
       //write name of file
       out.write(inFile.getBytes());
       
       //new line 
       out.write(13);
       out.write(10);
-
+  
       //write binary tree
-      String encodedTree=codeMap.encodeTree();
-      out.write(encodedTree.getBytes());
-      System.out.println(encodedTree);
+      
+      // special case:no nodes
+      if (codeMap.root==null) {
+        out.write("0".getBytes());
+        System.out.println(0);
+      }else {
+        String encodedTree=codeMap.encodeTree();
+        out.write(encodedTree.getBytes());
+        System.out.println(encodedTree);
+      }
       
       //new line 
       out.write(13);
       out.write(10);
-
+  
       //write number of extra bits
       int extra = (8-(data.length()%8));
       out.write(String.valueOf(extra).getBytes());
@@ -148,19 +166,28 @@ public class Encoder{
       //newline
       out.write(13);
       out.write(10);
-
+  
       //add extra bits to end of data
       data = data.append("0".repeat(extra));  
-
+  
+      System.out.println("Preliminary data written! Final stretch");
       //parse string 8 bits at a time to make a character
-      for (int i = 0; i < data.length(); i += 8){
-        int binaryString = Integer.parseInt(data.substring(i,i+8),2);
-        out.write(binaryString);
-      }  
-      
+      int length=data.length();
+      for (int i = 0; i < length; i += 8) {
+        int byteValue = 0;
+
+        // Process 8 bits directly
+        for (int j = 0; j < 8 && (i + j) < length; j++) {
+            byteValue = (byteValue << 1) | (data.charAt(i + j) - '0');
+        }
+        // Write the byte to the file
+        out.write(byteValue);
+    }
+      out.close();
+      System.out.println("File successfully zipped to: " + outFile);
     }catch(IOException e){
-      System.out.println("File read exception");
-      
+      System.out.println("File not found. Please ensure your path exists, and your input has no quotes!");
+      return;
     } finally {
       try{
         if (out != null) {
@@ -169,6 +196,7 @@ public class Encoder{
       }catch (IOException e){
       }
     }
+     
     
   }
 
